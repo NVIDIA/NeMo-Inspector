@@ -1,0 +1,4 @@
+defaults:
+  # add custom config to set up model_prediction
+  - base_inspector_config
+  - _self_

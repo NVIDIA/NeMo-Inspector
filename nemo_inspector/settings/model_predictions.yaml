@@ -1,0 +1,45 @@
+inspector_params:
+  model_prediction:  
+    # evelina:    nemo_inspector/results/saved_generations/math_70_final/math_openmath2_70b_100_multi_samples_new_labels_evelina.jsonl
+    # daria:      nemo_inspector/results/saved_generations/math_70_final/math_openmath2_70b_100_multi_samples_new_labels_mine.jsonl
+    # shubham:    nemo_inspector/results/saved_generations/math_70_final/math_openmath2_70b_100_multi_samples_new_labels_shubham.jsonl
+    # orig:     nemo_inspector/results/base/gsm8k/output-greedy.jsonl
+    # d_exp:    nemo_inspector/results/base/gsm_plus_critical/output-greedy-digit_expansion.jsonl                     
+    # num_sub:  nemo_inspector/results/base/gsm_plus_critical/output-greedy-numerical_substitution.jsonl              
+    # frac:     nemo_inspector/results/base/gsm_plus_critical/output-greedy-integer_decimal_fraction_conversion.jsonl 
+    # add_op:   nemo_inspector/results/base/gsm_plus_critical/output-greedy-adding_operation.jsonl                    
+    # distr:    nemo_inspector/results/base/gsm_plus_critical/output-greedy-distractor_insertion.jsonl               
+    # reverse:  nemo_inspector/results/base/gsm_plus_critical/output-greedy-reversing_operation.jsonl                 
+    # underst:  nemo_inspector/results/base/gsm_plus_critical/output-greedy-problem_understanding.jsonl               
+    # cr_th:    nemo_inspector/results/base/gsm_plus_critical/output-greedy-critical_thinking.jsonl
+    # math:     nemo_inspector/results/math_34b.jsonl
+    # orig:     nemo_inspector/results/llama3/70b/instruct_critical/8shot/gsm-plus-mini/output-greedy-gsm8k-adding_operation.jsonl              nemo_inspector/results/nemotron/after/8shot/text/fewshot_critical_rounded_few_shots/gsm-plus-mini/output-greedy-gsm8k-adding_operation.jsonl
+    # d_exp:    nemo_inspector/results/llama3/70b/instruct_critical/8shot/gsm-plus-mini/output-greedy-digit_expansion.jsonl                     nemo_inspector/results/nemotron/after/8shot/text/fewshot_critical_rounded_few_shots/gsm-plus-mini/output-greedy-digit_expansion.jsonl
+    # num_sub:  nemo_inspector/results/llama3/70b/instruct_critical/8shot/gsm-plus-mini/output-greedy-numerical_substitution.jsonl              nemo_inspector/results/nemotron/after/8shot/text/fewshot_critical_rounded_few_shots/gsm-plus-mini/output-greedy-numerical_substitution.jsonl
+    # frac:     nemo_inspector/results/llama3/70b/instruct_critical/8shot/gsm-plus-mini/output-greedy-integer_decimal_fraction_conversion.jsonl nemo_inspector/results/nemotron/after/8shot/text/fewshot_critical_rounded_few_shots/gsm-plus-mini/output-greedy-integer_decimal_fraction_conversion.jsonl
+    # add_op:   nemo_inspector/results/llama3/70b/instruct_critical/8shot/gsm-plus-mini/output-greedy-adding_operation.jsonl                    nemo_inspector/results/nemotron/after/8shot/text/fewshot_critical_rounded_few_shots/gsm-plus-mini/output-greedy-adding_operation.jsonl
+    # distr:    nemo_inspector/results/llama3/70b/instruct_critical/8shot/gsm-plus-mini/output-greedy-distraction_insertion.jsonl               nemo_inspector/results/nemotron/after/8shot/text/fewshot_critical_rounded_few_shots/gsm-plus-mini/output-greedy-distraction_insertion.jsonl
+    # reverse:  nemo_inspector/results/llama3/70b/instruct_critical/8shot/gsm-plus-mini/output-greedy-reversing_operation.jsonl                 nemo_inspector/results/nemotron/after/8shot/text/fewshot_critical_rounded_few_shots/gsm-plus-mini/output-greedy-reversing_operation.jsonl
+    # underst:  nemo_inspector/results/llama3/70b/instruct_critical/8shot/gsm-plus-mini/output-greedy-problem_understanding.jsonl               nemo_inspector/results/nemotron/after/8shot/text/fewshot_critical_rounded_few_shots/gsm-plus-mini/output-greedy-problem_understanding.jsonl
+    # cr_th:    nemo_inspector/results/nemotron/gsm-plus_with_rounding_and_few_shots/output-greedy-critical_thinking.jsonl
+    # mistral:  nemo_inspector/results/cut/gsm-plus/output-rs*.jsonl
+    # llama3:   nemo_inspector/results/llama3/70b/instruct/8shot/8shot/text/instruct_critical/gsm-plus/output-rs?.jsonl    nemo_inspector/results/llama3/70b/instruct/8shot/8shot/text/instruct_critical/gsm-plus/output-rs??.jsonl
+    # plus_70: /Users/dgitman/Documents/nemo_inspector/NeMo-Skills/gsm-plus_openmath2_70b_40_multi_samples.jsonl
+    # plus_8:  /Users/dgitman/Documents/nemo_inspector/NeMo-Skills/gsm-plus_openmath2_40b_40_multi_samples.jsonl
+    # math_70: nemo_inspector/results/saved_generations/math_70/math_openmath2_70b_100_multi_samples.jsonl
+    # math_8:  /Users/dgitman/Documents/nemo_inspector/NeMo-Skills/math_openmath2_70b_100_multi_samples.jsonl
+    # book:    /Users/dgitman/Documents/nemo_inspector/NeMo-Skills/nemo_inspector/results/textbook/greedy.jsonl
+    # gsm8k:     nemo_inspector/results/llama3/70b/instruct/8shot/8shot/text/instruct/gsm8k/output-duplicated-rs0.jsonl
+    # plus:      nemo_inspector/results/llama3/70b/instruct/8shot/8shot/text/instruct/gsm-plus/output-rs?.jsonl    #   nemo_inspector/results/llama3/70b/instruct/8shot/8shot/text/instruct/gsm-plus/output-rs??.jsonl
+    # plus_critical:  nemo_inspector/results/llama3/70b/instruct/8shot/8shot/text/instruct_critical/gsm-plus/output-greedy.jsonl
+    # filtering: nemo_inspector/results/clean/sfted/filtering_new/gsm8k_cr_th_aug/output-*.jsonl
+    # solutions: nemo_inspector/results/clean/filtering/sfted/gsm8k_cr_th_aug/output-*.jsonl
+    # gsm8k: nemo_inspector/results/clean/sfted/gsm8k_reverse/output-*.jsonl
+    # math: nemo_inspector/results/clean/sfted/math_reverse/output-*.jsonl
+    # critical: /Users/dgitman/Documents/visualization/NeMo-Skills/nemo_inspector/results/syntetic_data/synthetic_data/v2/syntetic_solutions/critical_thinking/part_2/output-rs*.jsonl
+    unused: /Users/dgitman/Documents/visualization/NeMo-Skills/datasets/math/unused_train.jsonl
+    # used: /Users/dgitman/Documents/visualization/NeMo-Skills/nemo_inspector/results/syntetic_data/synthetic_data/merged.jsonl
+    # auto: nemo_inspector/results/syntetic_data/synthetic_data/v2/syntetic_solutions/automated_critical_thinking/output-rs*.jsonl
+    # base: nemo_inspector/results/syntetic_data/synthetic_data/v2/syntetic_solutions/distraction/output-rs*.jsonl
+    # distraction: nemo_inspector/results/syntetic_data_gsm_plus/results/llama3-405b/distraction_v1/output-greedy.jsonl
+    
