@@ -36,7 +36,7 @@ def nemo_inspector_process():
     # Start the NeMo Inspector as a subprocess
 
     process = subprocess.Popen(
-        ["python", "nemo_inspector/nemo_inspector.py"],
+        ["python", "nemo_inspector"],
         cwd=project_root,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -54,7 +54,7 @@ def nemo_inspector_process():
 def chrome_driver():
     chrome_driver_path = ChromeDriverManager(chrome_type=ChromeType.GOOGLE).install()
     options = Options()
-    options.page_load_strategy = 'normal'
+    options.page_load_strategy = "normal"
     options.add_argument("--headless")
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
@@ -62,19 +62,21 @@ def chrome_driver():
 
     service = Service(chrome_driver_path)
     driver = webdriver.Chrome(service=service, options=options)
-    os.environ['PATH'] += os.pathsep + '/'.join(chrome_driver_path.split("/")[:-1])
+    os.environ["PATH"] += os.pathsep + "/".join(chrome_driver_path.split("/")[:-1])
     yield driver
     driver.quit()
 
 
 @pytest.mark.parametrize(
     ("element_id", "url"),
-    [('run_button', "/"), ('add_model', "/analyze")],
+    [("run_button", "/"), ("add_model", "/analyze")],
 )
 def test_dash_app_launch(chrome_driver, nemo_inspector_process, element_id, url):
     full_url = f"http://localhost:8080{url}"
 
     chrome_driver.get(full_url)
 
-    element = WebDriverWait(chrome_driver, 10).until(EC.presence_of_element_located((By.ID, element_id)))
+    element = WebDriverWait(chrome_driver, 10).until(
+        EC.presence_of_element_located((By.ID, element_id))
+    )
     assert element.is_displayed()

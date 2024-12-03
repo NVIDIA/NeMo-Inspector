@@ -13,9 +13,7 @@
 # limitations under the License.
 
 from dataclasses import field
-from typing import Dict, Optional
-
-import hydra
+from typing import Dict
 
 from nemo_skills.inference.generate import GenerateSolutionsConfig
 from nemo_skills.utils import nested_dataclass, unroll_files
@@ -25,8 +23,6 @@ from nemo_skills.utils import nested_dataclass, unroll_files
 class BaseInspectorConfig:
     model_prediction: Dict[str, str] = field(default_factory=dict)
     save_generations_path: str = "nemo_inspector/results/saved_generations"
-    prompt_config_path: Optional[str] = None
-    template_path: Optional[str] = None
 
     def __post_init__(self):
         self.model_prediction = {
@@ -38,7 +34,3 @@ class BaseInspectorConfig:
 @nested_dataclass(kw_only=True)
 class InspectorConfig(GenerateSolutionsConfig):
     inspector_params: BaseInspectorConfig = field(default_factory=BaseInspectorConfig)
-
-
-cs = hydra.core.config_store.ConfigStore.instance()
-cs.store(name="base_inspector_config", node=InspectorConfig)

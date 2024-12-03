@@ -12,20 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-from pathlib import Path
+from typing import Dict
+
 import dash_bootstrap_components as dbc
-from dash import Dash
+from dash import dcc, html
 
-assets_path = os.path.join(Path(__file__).parents[1], "assets")
+from nemo_inspector.layouts.common_layouts import get_text_modes_layout
 
-app = Dash(
-    __name__,
-    suppress_callback_exceptions=True,
-    external_stylesheets=[dbc.themes.BOOTSTRAP],
-    assets_folder=assets_path,
-)
 
-import nemo_inspector.callbacks.common as common
-import nemo_inspector.callbacks.analyze_page as analyze_page
-import nemo_inspector.callbacks.run_prompt_page as run_prompt_page
+def get_results_content_layout(
+    text: str, content: str = None, style: Dict = {}, is_formatted: bool = False
+) -> html.Div:
+    return html.Div(
+        [
+            get_text_modes_layout("results_content", is_formatted),
+            html.Pre(
+                content if content else text,
+                id="results_content_text",
+                style={"margin-bottom": "10px"},
+            ),
+            dcc.Store(data=text, id="text_store"),
+        ],
+        style=style,
+    )

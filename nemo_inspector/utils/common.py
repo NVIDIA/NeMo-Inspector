@@ -12,31 +12,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import datetime
 import functools
 import json
 import logging
 import os
 import re
-import subprocess
 from collections import defaultdict
 from dataclasses import fields, is_dataclass
 from types import NoneType
-from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple, Union, get_args, get_origin, get_type_hints
+from typing import (
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    get_args,
+    get_origin,
+    get_type_hints,
+)
 
-from dash import html
 from flask import current_app
 from joblib import Parallel, delayed
-from settings.constants import (
-    ANSWER_FIELD,
+
+from nemo_inspector.settings.constants import (
+    EXPECTED_ANSWER_FIELD,
     CUSTOM,
     ERROR_MESSAGE_TEMPLATE,
     FILE_NAME,
     GENERAL_STATS,
     IGNORE_FIELDS,
     INLINE_STATS,
-    OUTPUT,
-    PARAMETERS_FILE_NAME,
     PARAMS_TO_REMOVE,
     QUESTION_FIELD,
     RETRIEVAL_FIELDS,
@@ -46,9 +54,8 @@ from settings.constants import (
     UNDEFINED,
 )
 
-from nemo_skills.inference.generate import GenerateSolutionsConfig, InferenceConfig
-from nemo_skills.prompt.utils import FewShotExamplesConfig, PromptConfig, PromptTemplate
-from nemo_skills.utils import unroll_files
+from nemo_skills.prompt.few_shot_examples import examples_map
+from nemo_skills.prompt.utils import PromptConfig, PromptTemplate
 
 custom_stats = {}
 general_custom_stats = {}
@@ -57,6 +64,13 @@ excluded_rows = set()
 editable_rows = set()
 compared_rows = set()
 stats_raw = {INLINE_STATS: {CUSTOM: ""}, GENERAL_STATS: {CUSTOM: ""}}
+
+table_data = []
+labels = []
+
+
+def get_examples_map() -> Set:
+    return examples_map
 
 
 def get_editable_rows() -> Set:
@@ -87,6 +101,14 @@ def get_stats_raw() -> Dict:
     return stats_raw
 
 
+def get_table_data() -> List:
+    return table_data
+
+
+def get_labels() -> List:
+    return labels
+
+
 def parse_model_answer(answer: str) -> List[Dict]:
     """
     Parses a model answer and extracts code blocks, explanations, and outputs preserving their sequence.
@@ -102,7 +124,7 @@ def parse_model_answer(answer: str) -> List[Dict]:
             - 'output': The output of the code block.
 
     """
-    config = current_app.config['nemo_inspector']
+    config = current_app.config["nemo_inspector"]
     code_start, code_end = map(
         re.escape,
         config["inspector_params"]["code_separators"],
@@ -111,9 +133,9 @@ def parse_model_answer(answer: str) -> List[Dict]:
         re.escape,
         config["inspector_params"]["code_output_separators"],
     )
-    code_pattern = re.compile(fr'{code_start}(.*?){code_end}', re.DOTALL)
+    code_pattern = re.compile(rf"{code_start}(.*?){code_end}", re.DOTALL)
     code_output_pattern = re.compile(
-        fr'{code_start}((?:(?!{code_end}).)*){code_end}\s*\n\s*{output_start}((?:(?!{output_end}).)*){output_end}',
+        rf"{code_start}(.*?){code_end}\s*{output_start}(.*?){output_end}",
         re.DOTALL,
     )
     code_matches = list(code_pattern.finditer(answer))
@@ -129,9 +151,9 @@ def parse_model_answer(answer: str) -> List[Dict]:
             output_text = output_match.group(2).strip()
         parsed_results.append(
             {
-                'explanation': explanation,
-                'code': code_text,
-                'output': output_text,
+                "explanation": explanation,
+                "code": code_text,
+                "output": output_text,
             }
         )
         last_index = code_match.end()
@@ -143,47 +165,34 @@ def parse_model_answer(answer: str) -> List[Dict]:
             code_start_index = trailing_text.find(code_start.replace("\\", ""))
             parsed_results.append(
                 {
-                    'explanation': trailing_text[0:code_start_index].strip(),
-                    'code': trailing_text[code_start_index + len(code_start.replace("\\", "")) :],
-                    'output': "code_block was not finished",
-                    'wrong_code_block': True,
+                    "explanation": trailing_text[0:code_start_index].strip(),
+                    "code": trailing_text[
+                        code_start_index + len(code_start.replace("\\", "")) :
+                    ],
+                    "output": "code_block was not finished",
+                    "wrong_code_block": True,
                 }
             )
             trailing_text = None
         if trailing_text:
-            parsed_results.append({'explanation': trailing_text, 'code': None, 'output': None})
+            parsed_results.append(
+                {"explanation": trailing_text, "code": None, "output": None}
+            )
     return parsed_results
 
 
-def get_height_adjustment() -> html.Iframe:
-    return html.Iframe(
-        id="query_params_iframe",
-        srcDoc="""
-        <!DOCTYPE html>
-        <html>
-        <head>
-        </head>
-        <body>
-            <script>
-                window.addEventListener('DOMContentLoaded', function() {
-                    parent.registerTextarea();
-                });
-            </script>
-        </body>
-        </html>
-        """,
-        style={"visibility": "hidden"},
-    )
-
-
 @functools.lru_cache()
-def get_test_data(index: int, dataset: str) -> Tuple[Dict, int]:
+def get_dataset_sample(index: int, dataset: str) -> Tuple[Dict, int]:
     if not dataset or dataset == UNDEFINED or os.path.isfile(dataset) is False:
-        return {QUESTION_FIELD: "", ANSWER_FIELD: ""}, 0
+        return {QUESTION_FIELD: "", EXPECTED_ANSWER_FIELD: ""}, 0
     with open(dataset) as file:
         tests = file.readlines()
         index = max(min(len(tests), index), 1)
-        test = json.loads(tests[index - 1])
+        test = (
+            json.loads(tests[index - 1])
+            if index != 0
+            else {QUESTION_FIELD: "", EXPECTED_ANSWER_FIELD: ""}
+        )
     return test, index
 
 
@@ -191,7 +200,10 @@ def get_values_from_input_group(children: Iterable) -> Dict:
     values = {}
     for child in children:
         for input_group_child in child["props"]["children"]:
-            if "id" in input_group_child["props"].keys() and "value" in input_group_child["props"].keys():
+            if (
+                "id" in input_group_child["props"].keys()
+                and "value" in input_group_child["props"].keys()
+            ):
                 type_function = str
                 value = input_group_child["props"]["value"]
                 id = (
@@ -199,7 +211,7 @@ def get_values_from_input_group(children: Iterable) -> Dict:
                     if isinstance(input_group_child["props"]["id"], Dict)
                     else input_group_child["props"]["id"]
                 )
-                if value is None or value == UNDEFINED:
+                if value is None:
                     values[id] = None
                     continue
                 if str(value).isdigit() or str(value).replace("-", "", 1).isdigit():
@@ -207,7 +219,7 @@ def get_values_from_input_group(children: Iterable) -> Dict:
                 elif str(value).replace(".", "", 1).replace("-", "", 1).isdigit():
                     type_function = float
 
-                values[id] = type_function(str(value).replace('\\n', '\n'))
+                values[id] = type_function(str(value).replace("\\n", "\n"))
 
     return values
 
@@ -215,7 +227,10 @@ def get_values_from_input_group(children: Iterable) -> Dict:
 def extract_query_params(query_params_ids: List[Dict], query_params: List[Dict]) -> Dict:
     default_answer = {QUESTION_FIELD: "", "expected_answer": ""}
     try:
-        query_params_extracted = {param_id['id']: param for param_id, param in zip(query_params_ids, query_params)}
+        query_params_extracted = {
+            param_id["id"]: param
+            for param_id, param in zip(query_params_ids, query_params)
+        }
     except ValueError:
         query_params_extracted = default_answer
 
@@ -231,7 +246,12 @@ def get_utils_from_config_helper(cfg: Dict, display_path: bool = True) -> Dict:
             config = {
                 **config,
                 **{
-                    (key + SEPARATOR_DISPLAY if display_path and 'template' in inner_key else "") + inner_key: value
+                    (
+                        key + SEPARATOR_DISPLAY
+                        if display_path and "template" in inner_key
+                        else ""
+                    )
+                    + inner_key: value
                     for inner_key, value in get_utils_from_config_helper(value).items()
                 },
             }
@@ -288,7 +308,7 @@ def get_metrics(all_files_data: List[Dict], errors_dict: Dict = {}) -> Dict:
         )
 
     stats = {
-        'correct_responses': round(correct_responses, 2),
+        "correct_responses": round(correct_responses, 2),
         "wrong_responses": round(wrong_responses, 2),
         "no_response": round(no_response, 2),
         **custom_stats,
@@ -302,14 +322,14 @@ def eval_function(data):
 {}
     return {}
 """
-    code_lines = [''] + text.strip().split('\n')
+    code_lines = [""] + text.strip().split("\n")
     code = template.format(
-        '\n    '.join(code_lines[:-1]),
+        "\n    ".join(code_lines[:-1]),
         code_lines[-1:][0],
     )
     namespace = {}
     exec(code, namespace)
-    return namespace['eval_function']
+    return namespace["eval_function"]
 
 
 def calculate_metrics_for_whole_data(table_data: List, model_id: str) -> Dict:
@@ -357,17 +377,16 @@ def custom_deepcopy(data) -> List:
 
 
 @functools.lru_cache(maxsize=1)
-def get_data_from_files(cache_indicator=None) -> List:
-    if cache_indicator is not None:
-        return []
-    base_config = current_app.config['nemo_inspector']
+def get_data_from_files() -> List:
+    base_config = current_app.config["nemo_inspector"]
     dataset = None
-    if os.path.isfile(base_config['input_file']):
-        with open(base_config['input_file']) as f:
+    if os.path.isfile(base_config["input_file"]):
+        with open(base_config["input_file"]) as f:
             dataset = [json.loads(line) for line in f]
 
     available_models = {
-        model_name: model_info["file_paths"] for model_name, model_info in get_available_models().items()
+        model_name: model_info["file_paths"]
+        for model_name, model_info in get_available_models().items()
     }
 
     all_models_data_array = []
@@ -376,7 +395,7 @@ def get_data_from_files(cache_indicator=None) -> List:
         model_data = defaultdict(list)
         file_names = {}
         for file_id, path in enumerate(results_files):
-            file_name = path.split('/')[-1].split('.')[0]
+            file_name = path.split("/")[-1].split(".")[0]
             if file_name in file_names:
                 file_names[file_name] += 1
                 file_name += f"_{file_names[file_name]}"
@@ -387,7 +406,11 @@ def get_data_from_files(cache_indicator=None) -> List:
                 for question_index, answer in enumerate(answers):
                     result = {
                         FILE_NAME: file_name,
-                        **(dataset[question_index] if dataset and len(dataset) > question_index else {}),
+                        **(
+                            dataset[question_index]
+                            if dataset and len(dataset) > question_index
+                            else {}
+                        ),
                         "question_index": question_index + 1,
                         "page_index": file_id,
                         "labels": [],
@@ -414,7 +437,6 @@ def get_data_from_files(cache_indicator=None) -> List:
                     all_models_data_array[question_index][model_id],
                 )
             )
-
     return all_models_data_array
 
 
@@ -424,13 +446,16 @@ def get_filtered_files(
     array_to_filter: List,
 ) -> List:
     filter_lambda_functions = [
-        get_eval_function(func.strip()) for func in (filter_function if filter_function else "True").split('&&')
+        get_eval_function(func.strip())
+        for func in (filter_function if filter_function else "True").split("&&")
     ]
     available_models = get_available_models()
     filtered_data = [
         list(
             filter(
-                lambda data: catch_eval_exception(available_models, function, data, False),
+                lambda data: catch_eval_exception(
+                    available_models, function, data, False
+                ),
                 array_to_filter,
             )
         )
@@ -441,7 +466,11 @@ def get_filtered_files(
     filtered_data = filtered_data[0] if len(filtered_data) > 0 else [{FILE_NAME: ""}]
     if sorting_function and filtered_data != [{FILE_NAME: ""}]:
         sorting_lambda_function = get_eval_function(sorting_function.strip())
-        filtered_data.sort(key=lambda data: catch_eval_exception(available_models, sorting_lambda_function, data, 0))
+        filtered_data.sort(
+            key=lambda data: catch_eval_exception(
+                available_models, sorting_lambda_function, data, 0
+            )
+        )
 
     return filtered_data
 
@@ -449,140 +478,81 @@ def get_filtered_files(
 def is_detailed_answers_rows_key(key: str) -> bool:
     return (
         key not in get_deleted_stats()
-        and 'index' not in key
+        and "index" not in key
         and key not in STATS_KEYS + list(get_metrics([]).keys())
         or key == QUESTION_FIELD
     )
 
 
 @functools.lru_cache(maxsize=1)
-def get_available_models(cache_indicator=None) -> Dict:
-    if cache_indicator is not None:
-        return {}
-    try:
-        with open(PARAMETERS_FILE_NAME) as f:
-            runs_storage = json.load(f)
-    except FileNotFoundError:
-        runs_storage = {}
-    models = list(runs_storage.keys())
+def get_available_models() -> Dict:
     config = current_app.config["nemo_inspector"]["inspector_params"]
-    for model_name in models:
-        runs_storage[model_name]["file_paths"] = list(
-            unroll_files([os.path.join(config["results_path"], model_name, f"{OUTPUT}*.jsonl")])
-        )
+    runs_storage = {}
     for model_name, files in config["model_prediction"].items():
         runs_storage[model_name] = {
-            "utils": {},
-            "examples": {},
             "file_paths": files,
         }
 
     return runs_storage
 
 
-def run_subprocess(command: str) -> Tuple[str, bool]:
-    result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    success = True
-
-    delta = datetime.timedelta(minutes=1)
-    start_time = datetime.datetime.now()
-    while result.returncode != 0 and datetime.datetime.now() - start_time <= delta:
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
-
-    if result.returncode != 0:
-        logging.info(f"Error while running command: {command}")
-        logging.info(f"Return code: {result.returncode}")
-        logging.info(f"Output (stderr): {result.stderr.strip()}")
-        success = False
-
-    return result.stdout.strip(), result.stderr.strip(), success
-
-
-def get_config(
-    config_class: Union[GenerateSolutionsConfig, PromptConfig, InferenceConfig, FewShotExamplesConfig],
-    utils: Dict[str, str],
-    config: Dict,
-) -> Union[GenerateSolutionsConfig, PromptConfig, InferenceConfig, FewShotExamplesConfig]:
-    return config_class(
-        **{
-            key: value
-            for key, value in {
-                **config,
-                **utils,
-            }.items()
-            if key in {field.name for field in fields(config_class)}
-        },
-    )
-
-
-@functools.lru_cache(maxsize=1)
-def get_settings():
-    def get_settings_helper(config: Dict):
-        settings = {}
-        for key, value in config.items():
-            if key in SETTING_PARAMS:
-                settings[key] = value
-            if isinstance(value, dict):
-                settings = {**settings, **get_settings_helper(value)}
-        return settings
-
-    return get_settings_helper(current_app.config['nemo_inspector'])
-
-
-def get_utils_dict(name: Union[str, Dict], value: Union[str, int], id: Union[str, Dict] = None):
+def get_utils_dict(
+    name: Union[str, Dict], value: Union[str, int], id: Union[str, Dict] = None
+):
     if id is None:
         id = name
-    if name in current_app.config['nemo_inspector']['types'].keys():
+    if name in current_app.config["nemo_inspector"]["types"].keys():
         template = {
-            'props': {
-                'id': id,
-                'options': [
-                    {"label": value, "value": value} for value in current_app.config['nemo_inspector']['types'][name]
+            "props": {
+                "id": id,
+                "options": [
+                    {"label": value, "value": value}
+                    for value in current_app.config["nemo_inspector"]["types"][name]
                 ],
-                'value': current_app.config['nemo_inspector']['types'][name][0],
+                "value": current_app.config["nemo_inspector"]["types"][name][0],
             },
-            'type': 'Select',
-            'namespace': 'dash_bootstrap_components',
+            "type": "Select",
+            "namespace": "dash_bootstrap_components",
         }
     elif isinstance(value, (int, float)):
         float_params = {"step": 0.1} if isinstance(value, float) else {}
         template = {
-            'props': {
-                'id': id,
-                'debounce': True,
-                'min': 0,
-                'type': 'number',
-                'value': value,
+            "props": {
+                "id": id,
+                "debounce": True,
+                "min": 0,
+                "type": "number",
+                "value": value,
                 **float_params,
             },
-            'type': 'Input',
-            'namespace': 'dash_bootstrap_components',
+            "type": "Input",
+            "namespace": "dash_bootstrap_components",
         }
     else:
         template = {
-            'props': {
-                'id': id,
-                'debounce': True,
-                'style': {'width': '100%'},
-                'value': value,
+            "props": {
+                "id": id,
+                "debounce": True,
+                "style": {"width": "100%"},
+                "value": value,
             },
-            'type': 'Textarea',
-            'namespace': 'dash_bootstrap_components',
+            "type": "Textarea",
+            "namespace": "dash_bootstrap_components",
         }
     return {
-        'props': {
-            'children': [
+        "props": {
+            "children": [
                 {
-                    'props': {'children': name},
-                    'type': 'InputGroupText',
-                    'namespace': 'dash_bootstrap_components',
+                    "props": {"children": name},
+                    "type": "InputGroupText",
+                    "namespace": "dash_bootstrap_components",
                 },
                 template,
             ],
-            'className': 'mb-3',
+            "className": "mb-3",
         },
-        'type': 'InputGroup',
-        'namespace': 'dash_bootstrap_components',
+        "type": "InputGroup",
+        "namespace": "dash_bootstrap_components",
     }
 
 

@@ -12,20 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-from pathlib import Path
-import dash_bootstrap_components as dbc
-from dash import Dash
-
-assets_path = os.path.join(Path(__file__).parents[1], "assets")
-
-app = Dash(
-    __name__,
-    suppress_callback_exceptions=True,
-    external_stylesheets=[dbc.themes.BOOTSTRAP],
-    assets_folder=assets_path,
+from nemo_inspector.utils.decoration.common import (
+    design_text_output,
+    get_height_adjustment,
 )
-
-import nemo_inspector.callbacks.common as common
-import nemo_inspector.callbacks.analyze_page as analyze_page
-import nemo_inspector.callbacks.run_prompt_page as run_prompt_page
+from nemo_inspector.utils.decoration.code import highlight_code
+from nemo_inspector.utils.decoration.plain_text import color_text_diff

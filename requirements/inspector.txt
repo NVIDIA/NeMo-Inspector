@@ -16,9 +16,8 @@ ansi2html
 dash
 dash-ace
 dash_bootstrap_components
-hydra-core
 joblib
 pandas
 pygments
 sshtunnel_requests
-git+https://github.com/Kipok/NeMo-Skills.git
+nemo_skills @ git+https://github.com/NVIDIA/NeMo-Skills.git

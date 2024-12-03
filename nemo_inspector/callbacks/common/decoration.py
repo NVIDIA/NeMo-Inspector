@@ -12,20 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-from pathlib import Path
-import dash_bootstrap_components as dbc
-from dash import Dash
+from dash import html
+from dash.dependencies import Input, Output
 
-assets_path = os.path.join(Path(__file__).parents[1], "assets")
+from nemo_inspector.callbacks import app
+from nemo_inspector.utils.decoration import get_height_adjustment
 
-app = Dash(
-    __name__,
-    suppress_callback_exceptions=True,
-    external_stylesheets=[dbc.themes.BOOTSTRAP],
-    assets_folder=assets_path,
+
+@app.callback(
+    Output("js_container", "children", allow_duplicate=True),
+    [
+        Input("page_content", "children"),
+        Input("js_trigger", "children"),
+    ],
+    prevent_initial_call=True,
 )
-
-import nemo_inspector.callbacks.common as common
-import nemo_inspector.callbacks.analyze_page as analyze_page
-import nemo_inspector.callbacks.run_prompt_page as run_prompt_page
+def adjust_text_area_height(content: html.Div, trigger: str) -> html.Iframe:
+    return get_height_adjustment()
