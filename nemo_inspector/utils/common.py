@@ -13,14 +13,16 @@
 # limitations under the License.
 
 import functools
+import inspect
 import json
 import logging
 import os
 import re
 from collections import defaultdict
 from dataclasses import fields, is_dataclass
-from types import NoneType
+from types import NoneType, UnionType
 from typing import (
+    Any,
     Callable,
     Dict,
     Iterable,
@@ -590,3 +592,63 @@ def initialize_default(
             return (get_origin(_type) or _type)()
 
     return cls(**{field.name: get_default(field, specification) for field in fields(cls)})
+
+
+def resolve_type(field_type):
+    origin = get_origin(field_type)
+    if origin is not None:
+        # If the type is a generic, use its origin (e.g., list, dict)
+        return origin
+    elif isinstance(field_type, type):
+        return field_type
+    else:
+        # For special cases like typing.Any, return str by default
+        return str
+
+
+def get_type_default(field_type):
+    try:
+        return resolve_type(field_type)()
+    except Exception:
+        return None
+
+
+def resolve_union_or_any(field_type):
+    """Resolve Union and Any types to concrete types"""
+    origin_type = get_origin(field_type)
+    if origin_type is UnionType:
+        args = get_args(field_type)
+        non_none_args = [arg for arg in args if arg is not type(None)]
+        return non_none_args[0] if non_none_args else str
+    elif field_type is Any:
+        return str
+    else:
+        return resolve_type(field_type)
+
+
+def get_init_params(cls):
+    params = {}
+
+    # Iterate through the class and its base classes in MRO
+    for base_cls in inspect.getmro(cls):
+        if base_cls is object:
+            continue  # Skip the base `object` class
+
+        # Get the __init__ method
+        init_method = base_cls.__init__
+        init_signature = inspect.signature(init_method)
+        type_hints = get_type_hints(init_method)
+
+        for name, param in init_signature.parameters.items():
+            if name in ["self", "args", "kwargs"] or name in params:
+                continue  # Skip 'self' and already processed parameters
+
+            # Determine default value
+            if param.default is not inspect.Parameter.empty:
+                # If a default value exists, use it
+                params[name] = param.default
+            else:
+                # If no default value, use the type initializer
+                param_type = type_hints.get(name, None)
+                params[name] = get_type_default(resolve_union_or_any(param_type))
+    return params

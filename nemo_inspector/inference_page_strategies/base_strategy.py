@@ -198,8 +198,8 @@ class ModeStrategies:
 
     def run(self, utils: Dict, params: Dict) -> html.Div:
         utils = {key.split(SEPARATOR_ID)[-1]: value for key, value in utils.items()}
-        if utils["code_execution"] and str(utils["code_execution"]) == "True":
-            self.sandbox_init()
+        self.sandbox_init()
+        if utils.get("code_execution", False) and str(utils["code_execution"]) == "True":
             llm = get_code_execution_model(
                 **current_app.config["nemo_inspector"]["server"],
                 sandbox=self.sandbox,
@@ -212,16 +212,15 @@ class ModeStrategies:
             for key, value in utils.items()
             if key in inspect.signature(llm.generate).parameters
         }
-        logging.info(f"query to process: {params['prompts'][0]}")
-
+        logging.info(f"query to process: {params['prompts']}")
         retry_attempts = 5
         for i in range(retry_attempts):
             try:
                 outputs = llm.generate(
                     prompts=params["prompts"],
-                    stop_phrases=current_app.config["nemo_inspector"]["prompt"][
-                        "stop_phrases"
-                    ],
+                    stop_phrases=current_app.config["nemo_inspector"]["prompt"].get(
+                        "stop_phrases", ""
+                    ),
                     **generate_params,
                 )
                 break
@@ -241,7 +240,8 @@ class ModeStrategies:
             predicted_answer = extract_answer(outputs[0]["generation"])
             color, background, is_correct = (
                 ("#d4edda", "#d4edda", "correct")
-                if self.sandbox.is_output_correct(
+                if predicted_answer == params["expected_answer"]
+                or self.sandbox.is_output_correct(
                     predicted_answer, params["expected_answer"]
                 )
                 else ("#fecccb", "#fecccb", "incorrect")
@@ -274,7 +274,7 @@ class ModeStrategies:
 
         buid_examples_dict = nemo_skills.prompt.utils.Prompt.build_examples_dict
         nemo_skills.prompt.utils.Prompt.build_examples_dict = (
-            lambda x, y: get_examples_map().get(utils["examples_type"], [])
+            lambda x, y: get_examples_map().get(utils.get("examples_type"), [])
         )
         utils = {
             key.split(SEPARATOR_ID)[-1]: value
@@ -283,6 +283,8 @@ class ModeStrategies:
         }
         prompt_config = initialize_default(PromptConfig, {**utils})
         prompt = Prompt(config=prompt_config)
+        if current_app.config["nemo_inspector"]["server"]["server_type"] == "openai":
+            prompt.config.template = None
         prompt_text = prompt.fill(input_dict)
         nemo_skills.prompt.utils.Prompt.build_examples_dict = buid_examples_dict
         return prompt_text

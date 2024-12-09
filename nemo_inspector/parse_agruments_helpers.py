@@ -13,8 +13,7 @@
 # limitations under the License.
 
 import os
-from types import UnionType
-from typing import Dict, Any, List, Type, get_origin, get_args
+from typing import Dict, Any, List, Type
 import argparse
 import dataclasses
 
@@ -31,7 +30,12 @@ from nemo_inspector.settings.constants import (
     RETRIEVAL_FIELDS,
     UNDEFINED,
 )
-from nemo_inspector.utils.common import initialize_default, get_examples_map
+from nemo_inspector.utils.common import (
+    get_type_default,
+    initialize_default,
+    get_examples_map,
+    resolve_union_or_any,
+)
 
 
 class ParseDict(argparse.Action):
@@ -40,39 +44,6 @@ class ParseDict(argparse.Action):
         for value in values:
             key, value = value.split("=")
             getattr(namespace, self.dest)[key] = value
-
-
-def resolve_type(field_type):
-    origin = get_origin(field_type)
-    if origin is not None:
-        # If the type is a generic, use its origin (e.g., list, dict)
-        return origin
-    elif isinstance(field_type, type):
-        # If it's already a concrete type, return it as is
-        return field_type
-    else:
-        # For special cases like typing.Any, return str by default
-        return str
-
-
-def get_type_default(field_type):
-    try:
-        return resolve_type(field_type)()
-    except Exception:
-        return None
-
-
-def resolve_union_or_any(field_type):
-    """Resolve Union and Any types to concrete types"""
-    origin_type = get_origin(field_type)
-    if origin_type is UnionType:
-        args = get_args(field_type)
-        non_none_args = [arg for arg in args if arg is not type(None)]
-        return non_none_args[0] if non_none_args else str
-    elif field_type is Any:
-        return str
-    else:
-        return resolve_type(field_type)
 
 
 def add_arguments_from_dataclass(

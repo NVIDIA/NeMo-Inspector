@@ -58,7 +58,7 @@ class PromptBasedStrategy(ModeStrategies):
 
     def get_prompt(self, utils: Dict, params: Dict) -> str:
         utils = {key.split(SEPARATOR_ID)[-1]: value for key, value in utils.items()}
-        utils["user"] = "{question}"
+        utils["user"] = f"{{{QUESTION_FIELD}}}"
         utils["prompt_template"] = "{user}\n{generation}"
         return super().get_prompt(
             utils,
