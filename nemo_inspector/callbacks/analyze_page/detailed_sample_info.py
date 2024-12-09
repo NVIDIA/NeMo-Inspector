@@ -171,7 +171,7 @@ def show_item(
             sorting_functions=sorting_functions[1:],
             text_modes=text_modes,
         ),
-        ["", ""],
+        [""] * len(filter_functions),
         sorting_functions,
     ]
 
