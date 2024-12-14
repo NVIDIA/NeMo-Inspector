@@ -24,6 +24,7 @@ from nemo_inspector.settings.constants import (
     EXTRA_FIELDS,
     FILE_NAME,
 )
+from nemo_inspector.settings.constants.paths import PATH_TO_THE_REPOSITORY
 from nemo_inspector.utils.common import get_table_data
 
 
@@ -55,7 +56,8 @@ def open_save_dataset_modal(n1: int) -> bool:
 def save_dataset(n_click: int, base_model: str, save_path: str) -> Tuple[List, bool]:
     if not n_click or not save_path or not base_model:
         return no_update, no_update
-
+    if save_path.startswith("nemo_inspector"):
+        save_path = os.path.join(PATH_TO_THE_REPOSITORY, save_path)
     if not os.path.exists(save_path):
         try:
             os.mkdir(save_path)

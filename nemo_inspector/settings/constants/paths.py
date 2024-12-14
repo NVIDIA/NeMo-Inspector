@@ -11,7 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import pathlib
 
 COMPARE_ICON_PATH = "assets/images/icons/compare_icon.png"
 EDIT_ICON_PATH = "assets/images/icons/edit_icon.png"
 SAVE_ICON_PATH = "assets/images/icons/save_icon.png"
+PATH_TO_THE_REPOSITORY = pathlib.Path(__file__).parents[3]
