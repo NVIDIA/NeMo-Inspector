@@ -14,10 +14,10 @@
 
 import os
 from dataclasses import asdict
-from typing import Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import dash_bootstrap_components as dbc
-from dash import no_update
+from dash import ALL, no_update
 from dash._callback import NoUpdate
 from dash.dependencies import Input, Output, State
 from flask import current_app
@@ -34,6 +34,7 @@ from nemo_inspector.settings.constants import (
     SEPARATOR_DISPLAY,
     SEPARATOR_ID,
 )
+from nemo_inspector.settings.constants.common import QUERY_INPUT_TYPE, UNDEFINED
 from nemo_inspector.utils.common import (
     get_utils_from_config,
     initialize_default,
@@ -138,6 +139,17 @@ def update_code_separators(
     )
 
     return dummy_data + "1"
+
+
+@app.callback(
+    Output("multi_turn_key", "options"),
+    Input({"type": QUERY_INPUT_TYPE, "id": ALL}, "id"),
+    prevent_initial_call=True,
+)
+def update_multi_turn_key(
+    query_params_ids: List[int],
+) -> List[str]:
+    return [UNDEFINED] + [query_param["id"] for query_param in query_params_ids]
 
 
 @app.callback(
