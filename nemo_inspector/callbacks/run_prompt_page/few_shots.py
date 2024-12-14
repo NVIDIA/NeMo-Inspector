@@ -23,6 +23,8 @@ from dash._callback import NoUpdate
 from dash.dependencies import Input, Output, State
 from flask import current_app
 
+from nemo_skills.prompt.utils import Prompt, PromptConfig, FewShotExamplesConfig
+
 from nemo_inspector.callbacks import app
 from nemo_inspector.layouts import get_few_shots_by_id_layout
 from nemo_inspector.settings.constants import (
@@ -148,12 +150,10 @@ def update_examples_type(
                     ),
                 )
         try:
-            prompt = nemo_skills.prompt.utils.Prompt(
-                config=nemo_skills.prompt.utils.PromptConfig(
+            prompt = Prompt(
+                config=PromptConfig(
                     user="",
-                    few_shot_examples=initialize_default(
-                        nemo_skills.prompt.utils.FewShotExamplesConfig, utils
-                    ),
+                    few_shot_examples=initialize_default(FewShotExamplesConfig, utils),
                 )
             )
             get_examples_map()[examples_type] = prompt.build_examples_dict(
