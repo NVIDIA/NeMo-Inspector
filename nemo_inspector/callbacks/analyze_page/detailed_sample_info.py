@@ -37,6 +37,7 @@ from nemo_inspector.utils.common import (
     get_compared_rows,
     get_editable_rows,
     get_excluded_row,
+    get_file_id,
     get_filtered_files,
     get_table_data,
 )
@@ -153,14 +154,13 @@ def show_item(
         sorting_functions = [sorting_functions[0]] + [None] * (len(sorting_functions) - 1)
     question_id = current_page * page_size + idx[0]
     file_ids = [0] * len(models)
-    for model_id, name in enumerate(file_names):
-        for file_id, file in enumerate(
-            get_table_data()[question_id][models[model_id]]
+    for column_id in range(len(file_names)):
+        files = (
+            get_table_data()[question_id][models[column_id]]
             if len(get_table_data())
             else []
-        ):
-            if file[FILE_NAME] == name:
-                file_ids[model_id] = file_id
+        )
+        file_ids[column_id] = get_file_id(file_names, files, column_id)
     return [
         get_detailed_info_table_content(
             question_id=question_id,
@@ -479,21 +479,10 @@ def change_file(
 
         model = models[button_id]
 
-        def get_file_id(name_id: str):
-            file_id = 0
-            file_name = (
-                file_names[name_id]["value"]
-                if isinstance(file_names[name_id], Dict)
-                else file_names[name_id]
-            )
-            for i, file_data in enumerate(get_table_data()[question_id][model]):
-                if file_data[FILE_NAME] == file_name:
-                    file_id = i
-                    break
-            return file_id
-
-        file_id = get_file_id(button_id)
-        base_file_id = get_file_id(0)
+        file_id = get_file_id(file_names, get_table_data()[question_id][model], button_id)
+        base_file_id = get_file_id(
+            file_names, get_table_data()[question_id][models[0]], 0
+        )
 
         question_id = current_page * page_size + idx[0]
         table_data[button_id * len(rows_names) : (button_id + 1) * len(rows_names)] = (

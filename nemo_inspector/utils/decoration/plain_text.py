@@ -13,31 +13,72 @@
 # limitations under the License.
 
 from difflib import SequenceMatcher
+import re
 
 
-def color_text_diff(text1: str, text2: str) -> str:
+def tokenize(text: str):
+    """
+    Tokenize the text into separate tokens for:
+    - Whitespace sequences (\s+)
+    - Word sequences (\w+)
+    - Punctuation sequences ([^\w\s]+)
+
+    The regex ensures we capture all text in order.
+    """
+    # This pattern will capture tokens in the order they appear:
+    #   (\s+) => one or more whitespace chars
+    #   (\w+) => one or more word chars
+    #   ([^\w\s]+) => one or more chars that are not word chars or whitespace (punctuation)
+    pattern = re.compile(r"(\s+|\w+|[^\w\s]+)")
+    tokens = pattern.findall(text)
+    return tokens
+
+
+def color_text_diff(text1: str, text2: str):
     if text1 == text2:
         return [(text1, {})]
-    matcher = SequenceMatcher(None, text1, text2)
+
+    tokens1 = tokenize(text1)
+    tokens2 = tokenize(text2)
+
+    matcher = SequenceMatcher(None, tokens1, tokens2)
     result = []
+
     for tag, i1, i2, j1, j2 in matcher.get_opcodes():
         if tag == "equal":
-            result.append((text2[j1:j2], {}))
+            for k in range(j1, j2):
+                result.append((tokens2[k], {}))
+
         elif tag == "replace":
-            result.append((text1[i1:i2], {"background-color": "#c8e6c9"}))
-            result.append(
-                (
-                    text2[j1:j2],
-                    {"background-color": "#ffcdd2", "text-decoration": "line-through"},
+            # Tokens from text1 (deleted)
+            for k in range(i1, i2):
+                result.append((tokens1[k], {"background-color": "#c8e6c9"}))
+            # Tokens from text2 (inserted)
+            for k in range(j1, j2):
+                result.append(
+                    (
+                        tokens2[k],
+                        {
+                            "background-color": "#ffcdd2",
+                            "text-decoration": "line-through",
+                        },
+                    )
                 )
-            )
+
         elif tag == "insert":
-            result.append(
-                (
-                    text2[j1:j2],
-                    {"background-color": "#ffcdd2", "text-decoration": "line-through"},
+            for k in range(j1, j2):
+                result.append(
+                    (
+                        tokens2[k],
+                        {
+                            "background-color": "#ffcdd2",
+                            "text-decoration": "line-through",
+                        },
+                    )
                 )
-            )
+
         elif tag == "delete":
-            result.append((text1[i1:i2], {"background-color": "#c8e6c9"}))
+            for k in range(i1, i2):
+                result.append((tokens1[k], {"background-color": "#c8e6c9"}))
+
     return result
