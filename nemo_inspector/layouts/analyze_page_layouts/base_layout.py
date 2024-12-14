@@ -34,6 +34,7 @@ from nemo_inspector.settings.constants import (
 )
 from nemo_inspector.utils.common import (
     catch_eval_exception,
+    clear_table_data,
     custom_deepcopy,
     get_available_models,
     get_data_from_files,
@@ -100,7 +101,6 @@ def get_updated_tables_layout(
     base_model: str, update_function: str, models: List[str]
 ) -> List[html.Tr]:
     errors_dict = {}
-    global table_data
     if update_function:
         update_eval_function = get_eval_function(update_function.strip())
         available_models = {
@@ -108,7 +108,7 @@ def get_updated_tables_layout(
             for model_name, model_info in get_available_models().items()
         }
 
-        for question_id in range(len(table_data)):
+        for question_id in range(len(get_table_data())):
             new_dicts = list(
                 map(
                     lambda data: catch_eval_exception(
@@ -118,17 +118,17 @@ def get_updated_tables_layout(
                         data,
                         errors_dict,
                     ),
-                    table_data[question_id][base_model],
+                    get_table_data()[question_id][base_model],
                 )
             )
             for i, new_dict in enumerate(new_dicts):
                 for key, value in new_dict.items():
-                    table_data[question_id][base_model][i][key] = value
+                    get_table_data()[question_id][base_model][i][key] = value
 
-                keys = list(table_data[question_id][base_model][i].keys())
+                keys = list(get_table_data()[question_id][base_model][i].keys())
                 for key in keys:
                     if key not in new_dict:
-                        table_data[question_id][base_model][i].pop(key)
+                        get_table_data()[question_id][base_model][i].pop(key)
 
     if len(errors_dict):
         logging.error(ERROR_MESSAGE_TEMPLATE.format("update_dataset", errors_dict))
@@ -142,8 +142,8 @@ def get_updated_tables_layout(
                 filter(
                     is_detailed_answers_rows_key,
                     (
-                        table_data[0][base_model][0].keys()
-                        if len(table_data) and len(table_data[0][base_model])
+                        get_table_data()[0][base_model][0].keys()
+                        if len(get_table_data()) and len(get_table_data()[0][base_model])
                         else []
                     ),
                 )
@@ -156,7 +156,6 @@ def get_sorted_tables_layout(
     base_model: str, sorting_function: str, models: List[str]
 ) -> List[html.Tr]:
     errors_dict = {}
-    global table_data
     if sorting_function:
         sortting_eval_function = get_eval_function(sorting_function.strip())
         available_models = {
@@ -164,9 +163,9 @@ def get_sorted_tables_layout(
             for model_name, model_info in get_available_models().items()
         }
 
-        for question_id in range(len(table_data)):
-            for model in table_data[question_id].keys():
-                table_data[question_id][model].sort(
+        for question_id in range(len(get_table_data())):
+            for model in get_table_data()[question_id].keys():
+                get_table_data()[question_id][model].sort(
                     key=lambda data: catch_eval_exception(
                         available_models,
                         sortting_eval_function,
@@ -176,7 +175,7 @@ def get_sorted_tables_layout(
                     )
                 )
 
-        table_data.sort(
+        get_table_data().sort(
             key=lambda single_question_data: tuple(
                 map(
                     lambda data: catch_eval_exception(
@@ -202,8 +201,8 @@ def get_sorted_tables_layout(
                 filter(
                     is_detailed_answers_rows_key,
                     (
-                        table_data[0][base_model][0].keys()
-                        if len(table_data) and len(table_data[0][base_model])
+                        get_table_data()[0][base_model][0].keys()
+                        if len(get_table_data()) and len(get_table_data()[0][base_model])
                         else []
                     ),
                 )
@@ -219,17 +218,17 @@ def get_filtered_tables_layout(
     models: List[str],
     filter_mode: str,
 ) -> List[html.Tr]:
-    global table_data
     clean_table_data = []
     if not apply_on_filtered_data:
-        table_data = custom_deepcopy(get_data_from_files())
-        for question_id in range(len(table_data)):
-            for model_id, files_data in table_data[question_id].items():
+        clear_table_data()
+        get_table_data().extend(custom_deepcopy(get_data_from_files()))
+        for question_id in range(len(get_table_data())):
+            for model_id, files_data in get_table_data()[question_id].items():
                 stats = get_metrics(files_data)
-                table_data[question_id][model_id] = list(
+                get_table_data()[question_id][model_id] = list(
                     map(
                         lambda data: {**data, **stats},
-                        table_data[question_id][model_id],
+                        get_table_data()[question_id][model_id],
                     )
                 )
 
@@ -260,9 +259,9 @@ def get_filtered_tables_layout(
         )
 
         if filter_mode == FILES_FILTERING:
-            for question_id in range(len(table_data)):
+            for question_id in range(len(get_table_data())):
                 good_data = True
-                for model_id in table_data[question_id].keys():
+                for model_id in get_table_data()[question_id].keys():
 
                     def filtering_key_function(file_dict):
                         data = {model_id: file_dict}
@@ -279,24 +278,24 @@ def get_filtered_tables_layout(
                             ],
                         )
 
-                    table_data[question_id][model_id] = list(
+                    get_table_data()[question_id][model_id] = list(
                         filter(
                             filtering_key_function,
-                            table_data[question_id][model_id],
+                            get_table_data()[question_id][model_id],
                         )
                     )
-                    stats = get_metrics(table_data[question_id][model_id])
-                    table_data[question_id][model_id] = list(
+                    stats = get_metrics(get_table_data()[question_id][model_id])
+                    get_table_data()[question_id][model_id] = list(
                         map(
                             lambda data: {**data, **stats},
-                            table_data[question_id][model_id],
+                            get_table_data()[question_id][model_id],
                         )
                     )
 
-                    if table_data[question_id][model_id] == []:
+                    if get_table_data()[question_id][model_id] == []:
                         good_data = False
                 if good_data:
-                    clean_table_data.append(table_data[question_id])
+                    clean_table_data.append(get_table_data()[question_id])
         else:
             func = get_eval_function(
                 f"{BASE_GENERATION} = '{base_model}'\n" + filtering_function.strip()
@@ -310,10 +309,11 @@ def get_filtered_tables_layout(
                         default_answer=True,
                         errors_dict=errors_dict,
                     ),
-                    table_data,
+                    get_table_data(),
                 )
             )
-        table_data = clean_table_data
+        clear_table_data()
+        get_table_data().extend(clean_table_data)
     if len(errors_dict):
         logging.error(ERROR_MESSAGE_TEMPLATE.format("filtering", errors_dict))
 
@@ -326,8 +326,8 @@ def get_filtered_tables_layout(
                 filter(
                     is_detailed_answers_rows_key,
                     (
-                        table_data[0][base_model][0].keys()
-                        if len(table_data) and len(table_data[0][base_model])
+                        get_table_data()[0][base_model][0].keys()
+                        if len(get_table_data()) and len(get_table_data()[0][base_model])
                         else []
                     ),
                 )
@@ -337,7 +337,8 @@ def get_filtered_tables_layout(
 
 
 def get_tables_layout(base_model: str) -> List:
-    get_table_data().extend(custom_deepcopy(get_data_from_files()))
+    if get_table_data() == []:
+        get_table_data().extend(custom_deepcopy(get_data_from_files()))
     return (
         get_short_info_table_layout()
         + get_general_stats_layout(base_model)
