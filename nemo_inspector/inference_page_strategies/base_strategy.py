@@ -76,9 +76,9 @@ class ModeStrategies:
                     for name, value in sorted(
                         utils,
                         key=lambda item: (
-                            "a" + str(item[1])
+                            "a" + str(item[0])
                             if not isinstance(item[1], str)
-                            else "z" + str(item[1])
+                            else "z" + str(item[0])
                         ),
                     )
                     if condition(name, value)
