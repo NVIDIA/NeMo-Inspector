@@ -158,9 +158,6 @@ def args_preproccessing(args: Dict[str, str]):
         args["dataset"] = UNDEFINED
         args["split"] = UNDEFINED
 
-    if args["dataset"] is None and args["prompt_config"]:
-        args["prompt_config"] = UNDEFINED
-
     if "server_type" not in args["server"]:
         args["server"]["server_type"] = UNDEFINED
 
@@ -178,6 +175,7 @@ def args_postproccessing(args):
         "code_output_format": ["llama", "qwen"],
         "retrieval_field": [""],
         "max_retrieved_chars_field": [""],
+        "multi_turn_key": [UNDEFINED],
     }
 
     conf_path = (
