@@ -67,7 +67,7 @@ editable_rows = set()
 compared_rows = set()
 stats_raw = {INLINE_STATS: {CUSTOM: ""}, GENERAL_STATS: {CUSTOM: ""}}
 
-table_data = []
+dataset_data = []
 labels = []
 
 
@@ -103,8 +103,13 @@ def get_stats_raw() -> Dict:
     return stats_raw
 
 
+def clear_table_data() -> None:
+    global dataset_data
+    dataset_data = []
+
+
 def get_table_data() -> List:
-    return table_data
+    return dataset_data
 
 
 def get_labels() -> List:
@@ -346,7 +351,8 @@ def calculate_metrics_for_whole_data(table_data: List, model_id: str) -> Dict:
         )
     if len(errors_dict):
         for name, error_dict in errors_dict.items():
-            logging.error(ERROR_MESSAGE_TEMPLATE.format(name, error_dict))
+            if len(error_dict):
+                logging.error(ERROR_MESSAGE_TEMPLATE.format(name, error_dict))
 
 
 def catch_eval_exception(
@@ -406,13 +412,16 @@ def get_data_from_files() -> List:
             with open(path) as f:
                 answers = map(json.loads, f)
                 for question_index, answer in enumerate(answers):
+                    if answer.get("perturbation_type", None) == "critical thinking":
+                        answer["is_correct"] = False
+                    answer.pop("problem", None)
                     result = {
                         FILE_NAME: file_name,
-                        **(
-                            dataset[question_index]
-                            if dataset and len(dataset) > question_index
-                            else {}
-                        ),
+                        # **(
+                        #     dataset[question_index]
+                        #     if dataset and len(dataset) > question_index
+                        #     else {}
+                        # ),
                         "question_index": question_index + 1,
                         "page_index": file_id,
                         "labels": [],
@@ -556,6 +565,20 @@ def get_utils_dict(
         "type": "InputGroup",
         "namespace": "dash_bootstrap_components",
     }
+
+
+def get_file_id(file_names: List[str], files: List[Dict], column_id: str):
+    file_id = 0
+    file_name = (
+        file_names[column_id]["value"]
+        if isinstance(file_names[column_id], Dict)
+        else file_names[column_id]
+    )
+    for i, file_data in enumerate(files):
+        if file_data[FILE_NAME] == file_name:
+            file_id = i
+            break
+    return file_id
 
 
 def initialize_default(
