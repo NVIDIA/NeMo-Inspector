@@ -91,21 +91,22 @@ def add_arguments_from_dataclass(
             parser.add_argument(arg_name, **kwargs)
 
         # Add argument based on the type of the field
+        default = f"(default: {str(field.default)})" if has_default else ""
         if field_type == bool:
             add_argument(
                 action="store_true" if not has_default else "store_false",
-                help=f"{field_name} flag {"(default: " + str(field.default) + ")" if has_default else ''}",
+                help=f"{field_name} flag {default}",
             )
         elif field_type == dict:
             add_argument(
                 nargs="*",
                 action=ParseDict,
-                help=f"{field_name} {"(default: " + str(field.default) + ")" if has_default else ''}",
+                help=f"{field_name} flag {default}",
             )
         else:
             add_argument(
                 type=field_type,
-                help=f"{field_name} {"(default: " + str(field.default) + ")" if has_default else ''}",
+                help=f"{field_name} flag {default}",
             )
 
 
