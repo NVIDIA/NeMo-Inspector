@@ -19,13 +19,16 @@ import argparse
 import dataclasses
 
 from nemo_skills.utils import setup_logging
+from nemo_skills.prompt.utils import PromptConfig
 
 from nemo_inspector.parse_agruments_helpers import (
     add_arguments_from_dataclass,
     args_postproccessing,
+    convert_to_nested_dict,
     create_dataclass_from_args,
     args_preproccessing,
 )
+from nemo_inspector.settings.constants.common import UNDEFINED
 
 # Add parent directory to sys.path
 sys.path.append(str(Path(__file__).parents[1]))
@@ -49,12 +52,21 @@ def main():
         use_type_defaults=True,
     )
 
+    add_arguments_from_dataclass(
+        parser,
+        PromptConfig,
+        prefix="prompt.",
+        use_default=argparse.SUPPRESS,
+        enforce_required=False,
+        use_type_defaults=True,
+    )
+
     args = parser.parse_args()
     args_dict = vars(args)
     args_dict = args_preproccessing(args_dict)
 
     cfg = dataclasses.asdict(create_dataclass_from_args(InspectorConfig, args_dict))
-
+    cfg["prompt"] = convert_to_nested_dict(args_dict).get("prompt", {})
     cfg = args_postproccessing(cfg)
 
     from nemo_inspector.callbacks import app

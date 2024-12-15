@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import os
-from typing import Dict, Any, List, Type
+from typing import Dict, Any, List, Optional, Type
 import argparse
 import dataclasses
 
@@ -50,6 +50,7 @@ def add_arguments_from_dataclass(
     parser: argparse.ArgumentParser,
     dataclass_type: Type[Any],
     prefix: str = "",
+    use_default: Optional[str] = None,
     enforce_required: bool = True,
     use_type_defaults: bool = True,
 ):
@@ -66,6 +67,7 @@ def add_arguments_from_dataclass(
                 parser,
                 field_type,
                 prefix=f"{field_name}.",
+                use_default=use_default,
                 enforce_required=enforce_required,
                 use_type_defaults=use_type_defaults,
             )
@@ -77,7 +79,7 @@ def add_arguments_from_dataclass(
         field_type = resolve_union_or_any(field_type)
 
         # Determine if the argument is required
-        is_required = not has_default and not has_default_factory
+        is_required = not has_default and not has_default_factory and use_default
 
         # Helper function to add the argument to the parser
         def add_argument(**kwargs):
@@ -91,22 +93,24 @@ def add_arguments_from_dataclass(
             parser.add_argument(arg_name, **kwargs)
 
         # Add argument based on the type of the field
-        default = f"(default: {str(field.default)})" if has_default else ""
+        default_message = f"(default: {str(field.default)})" if has_default else ""
+        kwargs = {"default": use_default} if use_default else {}
         if field_type == bool:
             add_argument(
                 action="store_true" if not has_default else "store_false",
-                help=f"{field_name} flag {default}",
+                help=f"{field_name} flag {default_message}",
+                **kwargs,
             )
         elif field_type == dict:
             add_argument(
                 nargs="*",
                 action=ParseDict,
-                help=f"{field_name} flag {default}",
+                help=f"{field_name} flag {default_message}",
+                **kwargs,
             )
         else:
             add_argument(
-                type=field_type,
-                help=f"{field_name} flag {default}",
+                type=field_type, help=f"{field_name} flag {default_message}", **kwargs
             )
 
 
@@ -154,7 +158,20 @@ def get_specific_fields(dict_cfg: Dict, fields: List[Dict]) -> Dict:
     return retrieved_values
 
 
-def args_preproccessing(args: Dict[str, str]):
+def convert_to_nested_dict(flat_dict: Dict):
+    nested_dict = {}
+    for flat_key, value in flat_dict.items():
+        parts = flat_key.split(".")
+        current_level = nested_dict
+        for part in parts[:-1]:
+            if part not in current_level:
+                current_level[part] = {}
+            current_level = current_level[part]
+        current_level[parts[-1]] = value
+    return nested_dict
+
+
+def args_preproccessing(args: Dict):
     if args["dataset"] is None and args["split"] is None and args["input_file"] is None:
         args["dataset"] = UNDEFINED
         args["split"] = UNDEFINED
@@ -187,18 +204,25 @@ def args_postproccessing(args):
     )
 
     if not os.path.isfile(conf_path) and not os.path.isfile(template_path):
-        prompt_config_path = initialize_default(PromptConfig)
+        prompt_config_path = initialize_default(PromptConfig, args.get("prompt", {}))
     elif not os.path.isfile(conf_path):
-        prompt_config_path = initialize_default(PromptConfig, load_config(template_path))
+        specifications = {
+            **load_config(template_path),
+            **args.get("prompt", {}).get("template", {}),
+        }
+        prompt_config_path = initialize_default(PromptConfig, specifications)
     elif not os.path.isfile(template_path):
-        prompt_config_path = initialize_default(
-            PromptConfig, dataclasses.asdict(get_prompt(conf_path).config)
-        )
+        specifications = {
+            **dataclasses.asdict(get_prompt(conf_path).config),
+            **args.get("prompt", {}).get("template", {}),
+        }
+        prompt_config_path = initialize_default(PromptConfig, specifications)
     else:
-        prompt_config_path = initialize_default(
-            PromptConfig,
-            dataclasses.asdict(get_prompt(conf_path, template_path).config),
-        )
+        specifications = {
+            **dataclasses.asdict(get_prompt(conf_path, template_path).config),
+            **args.get("prompt", {}).get("template", {}),
+        }
+        prompt_config_path = initialize_default(PromptConfig, specifications)
 
     args["prompt"] = dataclasses.asdict(prompt_config_path)
 
