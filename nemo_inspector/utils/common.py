@@ -412,16 +412,13 @@ def get_data_from_files() -> List:
             with open(path) as f:
                 answers = map(json.loads, f)
                 for question_index, answer in enumerate(answers):
-                    if answer.get("perturbation_type", None) == "critical thinking":
-                        answer["is_correct"] = False
-                    answer.pop("problem", None)
                     result = {
                         FILE_NAME: file_name,
-                        # **(
-                        #     dataset[question_index]
-                        #     if dataset and len(dataset) > question_index
-                        #     else {}
-                        # ),
+                        **(
+                            dataset[question_index]
+                            if dataset and len(dataset) > question_index
+                            else {}
+                        ),
                         "question_index": question_index + 1,
                         "page_index": file_id,
                         "labels": [],
