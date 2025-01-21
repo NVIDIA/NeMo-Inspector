@@ -56,6 +56,7 @@ from nemo_inspector.settings.constants import (
     UNDEFINED,
 )
 
+from nemo_skills.evaluation.metrics.utils import is_correct_judgement
 from nemo_skills.prompt.few_shot_examples import examples_map
 from nemo_skills.prompt.utils import PromptConfig, PromptTemplate
 
@@ -286,7 +287,7 @@ def get_stats(all_files_data: List[Dict]) -> Tuple[float, float, float]:
     for data in all_files_data:
         if data.get("predicted_answer") is None:
             no_response += 1
-        elif data.get("is_correct", False):
+        elif is_correct_judgement(data.get("judgement", "")):
             correct += 1
         else:
             wrong += 1
