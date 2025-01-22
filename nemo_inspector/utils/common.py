@@ -281,13 +281,17 @@ def get_stats(all_files_data: List[Dict]) -> Tuple[float, float, float]:
 
     If not data is provided, returns -1 for all values.
     """
+    config = current_app.config["nemo_inspector"]["inspector_params"]
+
     correct = 0
     wrong = 0
     no_response = 0
     for data in all_files_data:
         if data.get("predicted_answer") is None:
             no_response += 1
-        elif is_correct_judgement(data.get("judgement", "")):
+        elif not config["use_judgement"] and data.get("is_correct", False):
+            correct += 1
+        elif config["use_judgement"] and is_correct_judgement(data.get("judgement", "")):
             correct += 1
         else:
             wrong += 1
