@@ -97,7 +97,7 @@ def add_arguments_from_dataclass(
         kwargs = {"default": use_default} if use_default else {}
         if field_type == bool:
             add_argument(
-                action="store_true" if not has_default else "store_false",
+                action="store_true",
                 help=f"{field_name} flag {default_message}",
                 **kwargs,
             )

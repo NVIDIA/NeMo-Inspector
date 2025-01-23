@@ -23,6 +23,7 @@ from nemo_skills.utils import nested_dataclass, unroll_files
 class BaseInspectorConfig:
     model_prediction: Dict[str, str] = field(default_factory=dict)
     save_generations_path: str = "nemo_inspector/results/saved_generations"
+    use_judgement: bool = False
 
     def __post_init__(self):
         self.model_prediction = {
