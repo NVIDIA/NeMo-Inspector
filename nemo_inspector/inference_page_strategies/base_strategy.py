@@ -219,7 +219,7 @@ class ModeStrategies:
                 outputs = llm.generate(
                     prompts=params["prompts"],
                     stop_phrases=current_app.config["nemo_inspector"]["prompt"].get(
-                        "stop_phrases", ""
+                        "stop_phrases", []
                     ),
                     **generate_params,
                 )
