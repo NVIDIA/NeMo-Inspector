@@ -14,7 +14,7 @@ The Inference page allows you to experiment with model prompts and responses in 
 1. **Clone and Install the Tool:**
    ```shell
    git clone git@github.com:NVIDIA/NeMo-Inspector.git
-   cd nemo-inspector
+   cd NeMo-Inspector
    pip install .
    ```
 
