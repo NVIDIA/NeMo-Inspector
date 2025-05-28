@@ -28,9 +28,7 @@ from nemo_inspector.parse_agruments_helpers import (
     create_dataclass_from_args,
     args_preproccessing,
 )
-from nemo_inspector.settings.constants.common import UNDEFINED
 
-# Add parent directory to sys.path
 sys.path.append(str(Path(__file__).parents[1]))
 
 from nemo_inspector.layouts import get_main_page_layout
